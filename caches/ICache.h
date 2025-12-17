@@ -1,20 +1,59 @@
-#pragma once
+#include <gtest/gtest.h>
+#include "../CacheImp.h"
 #include <string>
 
-
-// Interface (Abstract Base Class)
-template<typename Key, typename Value>
-class ICache {
-public:
-    virtual ~ICache() = default;
-    
-    // Pure virtual methods
-    virtual void set(const Key& key, const Value& value) = 0;
-    virtual Value get(const Key& key) = 0;
-    virtual bool contains(const Key& key) const = 0;
-    virtual void clear() = 0;
-    virtual std::size_t size() const = 0;
+class CacheTest : public ::testing::Test {
+protected:
+    void SetUp() override {}
 };
 
+TEST_F(CacheTest, BasicOps) {
+    ClockCache<int, int> c(3);
+    c.set(1, 10);
+    EXPECT_TRUE(c.contains(1));
+    EXPECT_EQ(c.get(1), 10);
+    EXPECT_EQ(c.size(), 1);
+}
 
+TEST_F(CacheTest, UpdateKey) {
+    ClockCache<std::string, int> c(2);
+    c.set("test", 1);
+    c.set("test", 5);
+    EXPECT_EQ(c.get("test"), 5);
+    EXPECT_EQ(c.size(), 1);
+}
 
+TEST_F(CacheTest, OverflowLogic) {
+    ClockCache<int, int> c(2);
+    c.set(1, 10);
+    c.set(2, 20);
+    c.set(3, 30);
+
+    EXPECT_FALSE(c.contains(1));
+    EXPECT_TRUE(c.contains(2));
+    EXPECT_TRUE(c.contains(3));
+}
+
+TEST_F(CacheTest, SecondChance) {
+    ClockCache<int, int> c(2);
+    c.set(1, 10);
+    c.set(2, 20);
+
+    c.set(3, 30);
+    EXPECT_FALSE(c.contains(1));
+
+    c.get(2);
+    c.set(4, 40);
+
+    EXPECT_FALSE(c.contains(2));
+    EXPECT_TRUE(c.contains(3));
+    EXPECT_TRUE(c.contains(4));
+}
+
+TEST_F(CacheTest, Clear) {
+    ClockCache<int, int> c(5);
+    c.set(1, 1);
+    c.clear();
+    EXPECT_EQ(c.size(), 0);
+    EXPECT_FALSE(c.contains(1));
+}
